@@ -119,6 +119,6 @@ Controls follow ISO/IEC 27001:2022, sized for a company of this scale: an asset 
 
 ## About the author
 
-I am an attorney licensed in Panama (Idoneidad 33617) with a technical degree in cybersecurity from Universidad del Istmo (2026), and I live in Boquete. I have handled property matters as a lawyer, including the separation of property, the sale of co-ownership shares and mortgage cancellations. I worked one year in fraud and consumer protection for Capital One through Foundever, and I designed an ISO 27001:2022 and COBIT 2019 security plan that IPACOOP adopted as policy. I spoke on artificial intelligence at the Chamber of Commerce in March 2026. I work in Spanish and English (C1).
+I am an attorney licensed in Panama with a technical degree in cybersecurity from Universidad del Istmo (2026), and I live in Boquete. I have handled property matters as a lawyer, including the separation of property, the sale of co-ownership shares and mortgage cancellations. I worked one year in fraud and consumer protection for Capital One through Foundever, and I designed an ISO 27001:2022 and COBIT 2019 security plan that IPACOOP adopted as policy. I spoke on artificial intelligence at the Chamber of Commerce in March 2026. I work in Spanish and English (C1).
 
 Contact: alain.abogado507@gmail.com, +507 6103-2102, [github.com/Alain507](https://github.com/Alain507)
