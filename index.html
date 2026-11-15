@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistente inmobiliario bilingüe para Chiriquí (demo)</title>
+<meta name="description" content="Demo: asistente bilingüe que califica compradores, explica el proceso de compra en Panamá y entrega una ficha de lead lista para el CRM.">
+<style>
+:root{
+  --forest:#12372f; --forest-2:#1d5246; --mist:#eaf0ee; --paper:#ffffff;
+  --ink:#14201c; --muted:#56655f; --line:#c9d5d0;
+  --cherry:#a8322b; --gold:#b98a1f; --gold-soft:#f4ead0;
+  --serif: Charter,"Bitstream Charter","Sitka Text",Cambria,Georgia,serif;
+  --sans: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--mist);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+/* top bar */
+.top{background:var(--forest);color:#fff}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;padding-bottom:12px}
+.brand{font-family:var(--serif);font-size:1.05rem;letter-spacing:.01em;min-width:0}
+.brand small{display:block;font-family:var(--sans);font-size:.75rem;opacity:.75}
+.lang{display:flex;flex-shrink:0;border:1px solid rgba(255,255,255,.4);border-radius:999px;overflow:hidden}
+.lang button{background:none;border:0;color:#fff;padding:6px 12px;cursor:pointer;font-size:.85rem}
+.lang button[aria-pressed="true"]{background:#fff;color:var(--forest);font-weight:600}
+
+/* intro */
+.intro{background:var(--forest);color:#fff;padding:18px 0 96px}
+.intro h1{font-family:var(--serif);font-weight:600;font-size:clamp(1.7rem,4.6vw,2.9rem);line-height:1.12;margin:0 0 12px;max-width:21ch}
+.intro p{margin:0;max-width:62ch;color:#d5e3de}
+
+/* stage: chat + ficha */
+.stage{display:grid;gap:20px;margin-top:-72px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.stage{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}}
+
+.chat{background:var(--paper);border-radius:14px;box-shadow:0 10px 30px rgba(18,55,47,.18);display:flex;flex-direction:column;overflow:hidden;min-height:520px}
+.chat-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.chat-head strong{font-family:var(--serif);font-size:1.05rem}
+.linkbtn{background:none;border:0;color:var(--forest-2);text-decoration:underline;cursor:pointer;padding:4px;font-size:.88rem}
+.log{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;max-height:56vh;min-height:300px}
+.msg{max-width:86%;padding:10px 14px;border-radius:14px;white-space:pre-line;overflow-wrap:anywhere}
+.msg.bot{background:var(--mist);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.user{background:var(--forest);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg.note{background:var(--gold-soft);border-left:4px solid var(--gold);border-radius:6px;font-size:.92rem;max-width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 12px}
+.chip{border:1.5px solid var(--forest-2);background:#fff;color:var(--forest);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:.92rem}
+.chip:hover{background:var(--forest);color:#fff}
+.composer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.composer input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
+.btn{background:var(--cherry);color:#fff;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;font-weight:600}
+.btn.quiet{background:#fff;color:var(--forest);border:1.5px solid var(--forest-2)}
+.contact{padding:0 16px 14px;display:grid;gap:8px}
+.contact label{font-size:.88rem;color:var(--muted);display:grid;gap:4px}
+.contact input[type=text]{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px}
+.contact .check{display:flex;gap:8px;align-items:flex-start;color:var(--ink)}
+.contact .row{display:flex;gap:8px;flex-wrap:wrap}
+.err{color:var(--cherry);font-size:.88rem;margin:0}
+
+/* ficha */
+.ficha{background:var(--paper);border-radius:14px;box-shadow:0 10px 30px rgba(18,55,47,.18);padding:18px;border-top:6px solid var(--gold)}
+.ficha h2{font-family:var(--serif);font-size:1.25rem;margin:0 0 2px}
+.ficha .sub{color:var(--muted);font-size:.88rem;margin:0 0 14px}
+.fields{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:.94rem}
+.fields dt{color:var(--muted)}
+.fields dd{margin:0;font-weight:600}
+.fields dd.empty{font-weight:400;color:#9aa8a3}
+.score{margin:16px 0 8px}
+.bar{height:10px;background:var(--mist);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--forest-2);transition:width .5s ease}
+.tier{display:inline-block;border-radius:6px;padding:3px 10px;font-weight:700;font-size:.9rem;margin-right:8px}
+.tier.hot{background:var(--cherry);color:#fff}
+.tier.warm{background:var(--gold-soft);color:#6b4e08}
+.tier.cold{background:var(--mist);color:var(--forest)}
+.ficha h3{font-family:var(--serif);font-size:1.02rem;margin:18px 0 6px}
+.ficha ul{margin:0;padding-left:18px;font-size:.92rem}
+.listing{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:.92rem}
+.listing b{display:block}
+.listing .price{font-family:var(--serif);font-size:1.05rem}
+.tag{display:inline-block;font-size:.78rem;border-radius:4px;padding:1px 7px;margin-top:4px;background:var(--mist);color:var(--forest)}
+.tag.warn{background:#f6dedb;color:#7a1f1a}
+pre.json{background:var(--ink);color:#d7efe6;border-radius:10px;padding:12px;font-size:.78rem;overflow:auto;max-height:240px;margin:8px 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.actions .btn{padding:8px 12px;font-size:.88rem}
+
+/* explainer */
+.explain{padding:48px 0 24px}
+.explain h2{font-family:var(--serif);font-size:1.5rem;margin:0 0 6px}
+.explain > .wrap > p{max-width:68ch;color:var(--muted);margin:0 0 20px}
+.cols{display:grid;gap:22px;grid-template-columns:1fr}
+@media (min-width:800px){.cols{grid-template-columns:repeat(3,1fr)}}
+.cols h3{font-family:var(--serif);font-size:1.1rem;margin:0 0 4px;padding-top:10px;border-top:3px solid var(--forest)}
+.cols p{margin:0;font-size:.95rem}
+.flow{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:10px;counter-reset:s}
+@media (min-width:800px){.flow{grid-template-columns:repeat(4,1fr)}}
+.flow li{counter-increment:s;background:var(--paper);border-radius:10px;padding:12px 14px;font-size:.92rem}
+.flow li::before{content:counter(s);display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--forest);color:#fff;font-size:.8rem;font-weight:700;margin-right:8px}
+.flow b{display:inline}
+.flow span{display:block;color:var(--muted);margin-top:4px}
+
+footer{padding:26px 0 40px;font-size:.86rem;color:var(--muted)}
+footer p{margin:0 0 6px;max-width:80ch}
+footer a{color:var(--forest-2)}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span data-i18n="brand"></span><small data-i18n="brandSub"></small></div>
+    <div class="lang" role="group" aria-label="Idioma / Language">
+      <button type="button" data-lang="es">Español</button>
+      <button type="button" data-lang="en">English</button>
+    </div>
+  </div>
+</header>
+
+<section class="intro">
+  <div class="wrap">
+    <h1 data-i18n="h1"></h1>
+    <p data-i18n="lead"></p>
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="stage">
+    <section class="chat" aria-label="Chat">
+      <div class="chat-head">
+        <strong data-i18n="chatTitle"></strong>
+        <button type="button" class="linkbtn" id="restart" data-i18n="restart"></button>
+      </div>
+      <div class="log" id="log" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <form class="contact" id="contact" hidden novalidate>
+        <label><span data-i18n="fName"></span><input type="text" id="cName" autocomplete="name"></label>
+        <label><span data-i18n="fContact"></span><input type="text" id="cHow" autocomplete="email"></label>
+        <label class="check"><input type="checkbox" id="cOk"><span data-i18n="fConsent"></span></label>
+        <p class="err" id="cErr" role="alert" hidden></p>
+        <div class="row">
+          <button class="btn" type="submit" data-i18n="fSave"></button>
+          <button class="btn quiet" type="button" id="cSkip" data-i18n="fSkip"></button>
+        </div>
+      </form>
+      <form class="composer" id="composer">
+        <input type="text" id="text" autocomplete="off" data-i18n-ph="placeholder" aria-label="Mensaje">
+        <button class="btn" type="submit" data-i18n="send"></button>
+      </form>
+    </section>
+
+    <aside class="ficha" aria-label="Ficha del lead">
+      <h2 data-i18n="fichaTitle"></h2>
+      <p class="sub" data-i18n="fichaSub"></p>
+      <dl class="fields" id="fields"></dl>
+      <div id="result"></div>
+    </aside>
+  </div>
+</main>
+
+<section class="explain">
+  <div class="wrap">
+    <h2 data-i18n="exTitle"></h2>
+    <p data-i18n="exLead"></p>
+    <div class="cols">
+      <div><h3 data-i18n="c1t"></h3><p data-i18n="c1"></p></div>
+      <div><h3 data-i18n="c2t"></h3><p data-i18n="c2"></p></div>
+      <div><h3 data-i18n="c3t"></h3><p data-i18n="c3"></p></div>
+    </div>
+    <ol class="flow">
+      <li><b data-i18n="s1t"></b><span data-i18n="s1"></span></li>
+      <li><b data-i18n="s2t"></b><span data-i18n="s2"></span></li>
+      <li><b data-i18n="s3t"></b><span data-i18n="s3"></span></li>
+      <li><b data-i18n="s4t"></b><span data-i18n="s4"></span></li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p data-i18n="foot1"></p>
+    <p data-i18n="foot2"></p>
+    <p><span data-i18n="foot3"></span> <a href="https://github.com/Alain507">github.com/Alain507</a></p>
+  </div>
+</footer>
+
+<script>
+"use strict";
+/* ---------- Interface text ---------- */
+const UI = {
+  es: {
+    brand: "Asistente inmobiliario para Chiriquí",
+    brandSub: "Demo con propiedades ficticias",
+    h1: "Atiende a cada comprador en su idioma, a cualquier hora, y entrega al agente un lead ya calificado.",
+    lead: "Responde seis preguntas como si fueras un comprador. Mientras respondes se llena la ficha que recibiría el equipo de ventas. También puedes escribir cualquier duda sobre cómo se compra una propiedad en Panamá.",
+    chatTitle: "Conversación",
+    restart: "Empezar de nuevo",
+    placeholder: "Escribe una pregunta o elige una opción",
+    send: "Enviar",
+    fichaTitle: "Ficha del lead",
+    fichaSub: "Se completa mientras el comprador responde.",
+    fName: "Nombre", fContact: "Correo o WhatsApp",
+    fConsent: "Autorizo el uso de estos datos solo para que un agente me contacte sobre esta búsqueda.",
+    fSave: "Guardar mis datos", fSkip: "Continuar sin datos",
+    errName: "Escribe tu nombre.", errHow: "Escribe un correo o un número de WhatsApp.",
+    errOk: "Marca la casilla de autorización para guardar tus datos.",
+    exTitle: "Qué hace esta demo y cómo pasaría a producción",
+    exLead: "Todo corre en tu navegador. No hay servidor, ni claves, ni datos que salgan de esta página. En producción, el mismo flujo se conecta a un modelo de lenguaje y al CRM a través de un servidor propio.",
+    c1t: "Califica antes de ocupar al agente",
+    c1: "Propósito, zona, tipo, presupuesto, plazo y forma de pago se convierten en un puntaje con sus razones, para que el agente llame primero a quien está listo para comprar.",
+    c2t: "Responde con contenido revisado",
+    c2: "Las respuestas sobre el proceso de compra salen de una base de conocimiento redactada y revisada por un abogado. El asistente no inventa precios ni da asesoría legal.",
+    c3t: "Pide permiso antes de guardar datos",
+    c3: "El contacto solo se registra con autorización expresa, con fecha y versión del aviso, como exige la Ley 81 de 2019 de protección de datos personales.",
+    s1t: "Sitio web y WhatsApp", s1: "El comprador escribe en español o inglés.",
+    s2t: "Servidor propio", s2: "Guarda las claves, filtra datos personales y limita el uso.",
+    s3t: "Modelo de lenguaje", s3: "Responde solo con la base de conocimiento y el inventario real.",
+    s4t: "CRM", s4: "Recibe la ficha en JSON y asigna el lead al agente correcto.",
+    foot1: "Las propiedades, precios y nombres de esta demo son ficticios. No está afiliada a ninguna inmobiliaria.",
+    foot2: "La información sobre el proceso de compra es general y no reemplaza la asesoría de un abogado en un caso concreto.",
+    foot3: "Hecha por Alain Guerra, abogado (Idoneidad 33617) y técnico en ciberseguridad, Boquete, Chiriquí.",
+    notSet: "Sin responder",
+    lPurpose: "Propósito", lZone: "Zona", lType: "Tipo", lBudget: "Presupuesto", lTimeline: "Plazo", lFinancing: "Pago", lContact: "Contacto",
+    contactNo: "No autorizó contacto",
+    score: "Puntaje", of: "de 100",
+    tier_hot: "Caliente", tier_warm: "Tibio", tier_cold: "Frío",
+    why: "Por qué este puntaje", next: "Siguiente paso sugerido", matches: "Propiedades que encajan",
+    nearest: "No hay coincidencia exacta. Estas son las más cercanas.",
+    crm: "Lo que recibe el CRM", copy: "Copiar JSON", copied: "Copiado", download: "Descargar JSON",
+    beds: "hab.", titled: "Finca titulada", rop: "Derechos posesorios: requiere debida diligencia reforzada",
+    again: "Sigamos con tu búsqueda.",
+    pickOne: "No entendí esa respuesta. Elige una de las opciones o escribe tu duda con otras palabras.",
+    fallback: "Esa pregunta necesita a una persona. Un agente o un abogado puede responderla; si dejaste tus datos, te contactarán. Mientras tanto, puedes preguntarme por el proceso de compra, la debida diligencia, los costos o los plazos.",
+    done: "Listo. Con tus respuestas armé la ficha que recibiría el equipo de ventas. Puedes seguir preguntando lo que quieras sobre el proceso de compra.",
+    consentAsk: "Antes de pedirte datos de contacto: solo se usarían para que un agente te escriba sobre esta búsqueda, no se comparten con terceros y puedes pedir que se eliminen cuando quieras (Ley 81 de 2019). En esta demo no salen de tu navegador.\n\n¿Quieres dejar tus datos?",
+    consentYes: "Sí, dejar mis datos", consentNo: "Prefiero no dejarlos",
+    saved: "Datos guardados con tu autorización.",
+    r_timeline: "Plazo de compra", r_fin: "Forma de pago", r_budget: "Presupuesto definido", r_contact: "Autorizó contacto", r_purpose: "Propósito claro",
+    n_hot: "Llamada de un agente en menos de una hora y envío de las propiedades que encajan.",
+    n_warm: "Correo con propiedades que encajan y seguimiento del agente en 48 horas.",
+    n_cold: "Añadir a la lista de novedades mensuales y volver a consultar en 60 días.",
+    n_nocontact: "Sin autorización de contacto: no se puede dar seguimiento. Ofrecer la guía de compra para descargar."
+  },
+  en: {
+    brand: "Real estate assistant for Chiriquí",
+    brandSub: "Demo with fictional listings",
+    h1: "Answer every buyer in their language, at any hour, and hand the agent a lead that is already qualified.",
+    lead: "Answer six questions as if you were a buyer. The file the sales team would receive fills in as you answer. You can also type any question about how buying property in Panama works.",
+    chatTitle: "Conversation",
+    restart: "Start over",
+    placeholder: "Type a question or pick an option",
+    send: "Send",
+    fichaTitle: "Lead file",
+    fichaSub: "It fills in as the buyer answers.",
+    fName: "Name", fContact: "Email or WhatsApp",
+    fConsent: "I authorize the use of this information only so an agent can contact me about this search.",
+    fSave: "Save my details", fSkip: "Continue without details",
+    errName: "Enter your name.", errHow: "Enter an email or a WhatsApp number.",
+    errOk: "Tick the authorization box to save your details.",
+    exTitle: "What this demo does and how it would go to production",
+    exLead: "Everything runs in your browser. There is no server, no keys, and no data leaving this page. In production, the same flow connects to a language model and the CRM through the company's own server.",
+    c1t: "Qualifies before taking an agent's time",
+    c1: "Purpose, area, type, budget, timeline and payment method become a score with its reasons, so the agent calls the buyer who is ready first.",
+    c2t: "Answers from reviewed content",
+    c2: "Answers about the buying process come from a knowledge base written and reviewed by an attorney. The assistant does not invent prices or give legal advice.",
+    c3t: "Asks permission before saving data",
+    c3: "Contact details are stored only with express consent, with a date and notice version, as Panama's Law 81 of 2019 on personal data protection requires.",
+    s1t: "Website and WhatsApp", s1: "The buyer writes in Spanish or English.",
+    s2t: "Company server", s2: "Holds the keys, filters personal data and limits usage.",
+    s3t: "Language model", s3: "Answers only from the knowledge base and the real inventory.",
+    s4t: "CRM", s4: "Receives the file as JSON and routes the lead to the right agent.",
+    foot1: "The properties, prices and names in this demo are fictional. It is not affiliated with any brokerage.",
+    foot2: "The information on the buying process is general and does not replace an attorney's advice on a specific case.",
+    foot3: "Built by Alain Guerra, attorney (Panama bar license 33617) and cybersecurity technician, Boquete, Chiriquí.",
+    notSet: "Not answered",
+    lPurpose: "Purpose", lZone: "Area", lType: "Type", lBudget: "Budget", lTimeline: "Timeline", lFinancing: "Payment", lContact: "Contact",
+    contactNo: "Did not authorize contact",
+    score: "Score", of: "out of 100",
+    tier_hot: "Hot", tier_warm: "Warm", tier_cold: "Cold",
+    why: "Why this score", next: "Suggested next step", matches: "Matching properties",
+    nearest: "No exact match. These are the closest.",
+    crm: "What the CRM receives", copy: "Copy JSON", copied: "Copied", download: "Download JSON",
+    beds: "bd", titled: "Titled property", rop: "Rights of possession: needs enhanced due diligence",
+    again: "Back to your search.",
+    pickOne: "I did not understand that answer. Pick one of the options or rephrase your question.",
+    fallback: "That question needs a person. An agent or an attorney can answer it; if you left your details, they will contact you. Meanwhile, you can ask me about the buying process, due diligence, costs or timelines.",
+    done: "Done. I used your answers to build the file the sales team would receive. You can keep asking anything about the buying process.",
+    consentAsk: "Before I ask for contact details: they would only be used so an agent can write to you about this search, they are not shared with third parties, and you can ask for them to be deleted at any time (Panama Law 81 of 2019). In this demo they never leave your browser.\n\nWould you like to leave your details?",
+    consentYes: "Yes, leave my details", consentNo: "I'd rather not",
+    saved: "Details saved with your authorization.",
+    r_timeline: "Purchase timeline", r_fin: "Payment method", r_budget: "Defined budget", r_contact: "Authorized contact", r_purpose: "Clear purpose",
+    n_hot: "Agent call within one hour and the matching properties sent over.",
+    n_warm: "Email with matching properties and agent follow-up within 48 hours.",
+    n_cold: "Add to the monthly new-listings list and check back in 60 days.",
+    n_nocontact: "No contact consent: no follow-up is possible. Offer the buying guide as a download."
+  }
+};
+
+/* ---------- Qualification questions ---------- */
+const STEPS = [
+  { id: "purpose",
+    q: { es: "Hola. Te ayudo a encontrar propiedad en Chiriquí y a entender cómo se compra en Panamá.\n\n¿Para qué buscas la propiedad?",
+         en: "Hello. I can help you find property in Chiriquí and understand how buying works in Panama.\n\nWhat is the property for?" },
+    opts: [
+      { v: "live", es: "Vivir todo el año", en: "Live year-round", kw: ["vivir", "mudar", "live", "move", "relocat"] },
+      { v: "retire", es: "Retiro", en: "Retirement", kw: ["retir", "jubil", "pension"] },
+      { v: "invest", es: "Inversión o alquiler", en: "Investment or rental", kw: ["inver", "invest", "alquil", "rent", "airbnb"] },
+      { v: "vacation", es: "Casa de vacaciones", en: "Vacation home", kw: ["vacac", "vacation", "holiday", "segunda", "second home"] }
+    ] },
+  { id: "zone",
+    q: { es: "¿Qué zona te interesa?", en: "Which area interests you?" },
+    opts: [
+      { v: "boquete", es: "Boquete", en: "Boquete", kw: ["boquete"] },
+      { v: "highlands", es: "Volcán y Tierras Altas", en: "Volcán and Tierras Altas", kw: ["volcan", "tierras altas", "cerro punta", "highlands"] },
+      { v: "david", es: "David", en: "David", kw: ["david"] },
+      { v: "beach", es: "Playas (Boca Chica, Las Lajas)", en: "Beaches (Boca Chica, Las Lajas)", kw: ["playa", "beach", "boca chica", "lajas", "costa", "coast"] },
+      { v: "any", es: "Aún no lo sé", en: "Not sure yet", kw: ["no se", "no lo se", "not sure", "cualquier", "any"] }
+    ] },
+  { id: "type",
+    q: { es: "¿Qué tipo de propiedad?", en: "What type of property?" },
+    opts: [
+      { v: "house", es: "Casa", en: "House", kw: ["casa", "house", "home"] },
+      { v: "condo", es: "Apartamento", en: "Condo", kw: ["apart", "condo", "ph"] },
+      { v: "land", es: "Terreno", en: "Land", kw: ["terreno", "lote", "land", "lot"] },
+      { v: "farm", es: "Finca", en: "Farm", kw: ["finca", "farm", "cafe", "coffee"] }
+    ] },
+  { id: "budget",
+    q: { es: "¿Cuál es tu presupuesto en dólares?", en: "What is your budget in US dollars?" },
+    opts: [
+      { v: "b1", es: "Hasta $150,000", en: "Up to $150,000", min: 0, max: 150000 },
+      { v: "b2", es: "$150,000 a $300,000", en: "$150,000 to $300,000", min: 150000, max: 300000 },
+      { v: "b3", es: "$300,000 a $600,000", en: "$300,000 to $600,000", min: 300000, max: 600000 },
+      { v: "b4", es: "Más de $600,000", en: "Over $600,000", min: 600000, max: Infinity }
+    ] },
+  { id: "timeline",
+    q: { es: "¿Cuándo te gustaría comprar?", en: "When would you like to buy?" },
+    opts: [
+      { v: "t1", es: "En los próximos 3 meses", en: "Within 3 months", kw: ["ya", "ahora", "pronto", "now", "asap", "soon", "3 mes", "3 month"], pts: 35 },
+      { v: "t2", es: "En 3 a 6 meses", en: "In 3 to 6 months", kw: ["6 mes", "6 month"], pts: 25 },
+      { v: "t3", es: "En 6 a 12 meses", en: "In 6 to 12 months", kw: ["12 mes", "12 month", "ano", "year"], pts: 12 },
+      { v: "t4", es: "Solo estoy explorando", en: "Just exploring", kw: ["explor", "mirando", "looking", "browsing"], pts: 3 }
+    ] },
+  { id: "financing",
+    q: { es: "¿Cómo piensas pagar?", en: "How do you plan to pay?" },
+    opts: [
+      { v: "cash", es: "De contado", en: "Cash", kw: ["contado", "cash", "efectivo"], pts: 30 },
+      { v: "pre", es: "Financiamiento preaprobado", en: "Pre-approved financing", kw: ["preaprob", "pre-aprob", "pre-approv", "preapprov"], pts: 25 },
+      { v: "need", es: "Necesito financiamiento", en: "I need financing", kw: ["necesito", "need", "hipoteca", "mortgage", "prestamo", "loan"], pts: 12 },
+      { v: "unsure", es: "Aún no lo sé", en: "Not sure yet", kw: ["no se", "no lo se", "not sure"], pts: 5 }
+    ] }
+];
+
+/* ---------- Knowledge base (general information, attorney-reviewed) ---------- */
+const KB = [
+  { id: "foreigners", kw: ["extranjero", "foreigner", "foreign", "can i buy", "puedo comprar", "ciudadan", "citizen", "frontera", "border"],
+    q: { es: "¿Puede comprar un extranjero?", en: "Can a foreigner buy?" },
+    a: { es: "Sí. Un extranjero puede comprar propiedad titulada en Panamá con los mismos derechos de dominio que un panameño, a nombre propio o de una sociedad.\n\nHay una excepción constitucional: los extranjeros no pueden adquirir tierras a menos de 10 kilómetros de las fronteras. En Chiriquí importa por la frontera con Costa Rica, así que conviene confirmar la ubicación exacta antes de avanzar.",
+         en: "Yes. A foreigner can buy titled property in Panama with the same ownership rights as a Panamanian, in their own name or through a company.\n\nThere is one constitutional exception: foreigners cannot acquire land within 10 kilometers of the national borders. In Chiriquí this matters because of the Costa Rica border, so confirm the exact location before moving forward." } },
+  { id: "title", kw: ["titulad", "titled", "title", "titulo", "posesori", "possession", "rop", "anati"],
+    q: { es: "Finca titulada o derechos posesorios", en: "Titled property or rights of possession" },
+    a: { es: "Una finca titulada está inscrita en el Registro Público con su número de folio real, y el Registro muestra quién es el dueño y qué gravámenes tiene.\n\nLos derechos posesorios no son un título de propiedad inscrito: reconocen la ocupación de un terreno. Son frecuentes en costas e islas, cuestan menos y tienen más riesgo. Exigen una debida diligencia más profunda y, cuando procede, un trámite de titulación ante la ANATI.",
+         en: "Titled property is recorded at the Public Registry under its own folio number, and the Registry shows who owns it and what liens it carries.\n\nRights of possession are not a recorded ownership title: they recognize the occupation of a piece of land. They are common on coasts and islands, cost less and carry more risk. They call for deeper due diligence and, where it applies, a titling process before ANATI." } },
+  { id: "diligence", kw: ["debida diligencia", "due diligence", "diligencia", "revisar", "verificar", "check", "gravamen", "lien", "hipoteca sobre", "paz y salvo", "investig"],
+    q: { es: "¿Qué se revisa antes de comprar?", en: "What gets checked before buying?" },
+    a: { es: "Antes de firmar, un abogado normalmente revisa:\n• Certificado del Registro Público: dueño, gravámenes, hipotecas y anotaciones.\n• Plano catastral y linderos, comparados con el terreno real.\n• Paz y salvo de impuesto de inmueble y de agua (IDAAN).\n• Si es propiedad horizontal, paz y salvo de cuotas de mantenimiento.\n• Uso de suelo, servidumbres y acceso legal a la propiedad.\n• Si vende una sociedad, que exista y que quien firma tenga facultad.\n• Inspección física de la propiedad.",
+         en: "Before signing, an attorney normally checks:\n• Public Registry certificate: owner, liens, mortgages and annotations.\n• Survey plan and boundaries, compared against the actual land.\n• Tax clearance for property tax and for water (IDAAN).\n• For condominium property, clearance of maintenance fees.\n• Zoning, easements and legal access to the property.\n• If the seller is a company, that it exists and the signer has authority.\n• Physical inspection of the property." } },
+  { id: "promise", kw: ["promesa", "promise", "abono", "deposit", "deposito", "separar", "arras", "reserv"],
+    q: { es: "El contrato de promesa", en: "The promise-to-purchase contract" },
+    a: { es: "La promesa de compraventa fija precio, plazo, condiciones y penalidades mientras se completan la debida diligencia y el financiamiento. Suele acompañarse de un abono, con frecuencia cercano al 10 % del precio, aunque se negocia.\n\nLa promesa puede inscribirse en el Registro Público para proteger al comprador frente a terceros.",
+         en: "The promise-to-purchase contract sets the price, deadline, conditions and penalties while due diligence and financing are completed. It usually comes with a deposit, often around 10% of the price, though this is negotiated.\n\nThe promise can be recorded at the Public Registry to protect the buyer against third parties." } },
+  { id: "closing", kw: ["cierre", "closing", "escritura", "deed", "notari", "notary", "inscri", "registr", "proceso", "process", "pasos", "steps", "como se compra", "how to buy", "how do i buy"],
+    q: { es: "¿Cómo es el proceso de compra?", en: "How does the buying process work?" },
+    a: { es: "En una compra de finca titulada, los pasos habituales son:\n1. Oferta y debida diligencia.\n2. Promesa de compraventa con abono.\n3. Escritura pública de compraventa ante notario.\n4. Pago, normalmente con carta promesa de pago bancaria o depósito en garantía.\n5. Inscripción de la escritura en el Registro Público.\n\nLa propiedad pasa al comprador cuando la escritura queda inscrita, no cuando se firma.",
+         en: "For a titled property, the usual steps are:\n1. Offer and due diligence.\n2. Promise-to-purchase contract with a deposit.\n3. Public deed of sale signed before a notary.\n4. Payment, normally through a bank's irrevocable promise-of-payment letter or escrow.\n5. Recording of the deed at the Public Registry.\n\nOwnership passes to the buyer when the deed is recorded, not when it is signed." } },
+  { id: "costs", kw: ["costo", "cost", "gasto", "fee", "honorario", "cuanto cuesta el tramite", "closing cost", "transferencia", "transfer tax", "ganancia de capital", "capital gain", "itbi"],
+    q: { es: "Costos e impuestos de la compra", en: "Purchase costs and taxes" },
+    a: { es: "El comprador suele cubrir honorarios legales, gastos de notaría y derechos de inscripción en el Registro Público. El impuesto de transferencia de bienes inmuebles y el de ganancia de capital corresponden por ley al vendedor, aunque las partes pueden pactar otra cosa.\n\nLos montos dependen del precio y de cada operación. Pide el cálculo por escrito antes de firmar la promesa.",
+         en: "The buyer usually covers legal fees, notary costs and Public Registry recording fees. The real estate transfer tax and the capital gains tax fall on the seller by law, although the parties can agree otherwise.\n\nThe amounts depend on the price and on each transaction. Ask for the calculation in writing before signing the promise contract." } },
+  { id: "time", kw: ["cuanto tarda", "cuanto demora", "how long", "tiempo", "duracion", "demora", "weeks", "semanas"],
+    q: { es: "¿Cuánto tarda?", en: "How long does it take?" },
+    a: { es: "Con una finca titulada y documentos en orden, una compra de contado suele cerrarse en unas semanas. Con financiamiento bancario, sociedades extranjeras o documentos por corregir puede tomar varios meses. El abogado puede dar un plazo realista después de la debida diligencia.",
+         en: "With a titled property and documents in order, a cash purchase usually closes in a matter of weeks. With bank financing, foreign companies or documents that need correcting, it can take several months. The attorney can give a realistic timeline after due diligence." } },
+  { id: "finance", kw: ["financiamiento", "financing", "banco", "bank", "hipoteca", "mortgage", "prestamo", "loan", "credito", "credit"],
+    q: { es: "Financiamiento para extranjeros", en: "Financing for foreigners" },
+    a: { es: "Varios bancos en Panamá financian a compradores extranjeros. Normalmente piden un abono inicial mayor que a un residente y más documentación: referencias bancarias, prueba de ingresos y, según la edad, seguro de vida. Las condiciones cambian de un banco a otro, por lo que conviene comparar al menos dos ofertas.",
+         en: "Several banks in Panama lend to foreign buyers. They normally ask for a larger down payment than from a resident and more paperwork: bank references, proof of income and, depending on age, life insurance. Terms vary from bank to bank, so compare at least two offers." } },
+  { id: "residency", kw: ["residencia", "residency", "visa", "migra", "immigration", "pensionado"],
+    q: { es: "¿Comprar da residencia?", en: "Does buying grant residency?" },
+    a: { es: "Comprar una propiedad no otorga residencia por sí solo. Panamá tiene programas migratorios ligados a pensión o a inversión, cada uno con requisitos propios. Un abogado de migración puede decir cuál aplica a tu caso antes de que compres.",
+         en: "Buying property does not grant residency by itself. Panama has immigration programs tied to a pension or to investment, each with its own requirements. An immigration attorney can tell you which one fits your case before you buy." } },
+  { id: "tax", kw: ["impuesto de inmueble", "property tax", "impuesto anual", "annual tax", "exoner", "exempt"],
+    q: { es: "Impuesto de inmueble", en: "Property tax" },
+    a: { es: "El impuesto de inmueble se paga cada año según el valor catastral de la propiedad, con tarifas progresivas y una exención para la vivienda principal hasta cierto valor. Antes de comprar, pide el paz y salvo de inmueble: confirma que el vendedor está al día.",
+         en: "Property tax is paid every year based on the property's registered (cadastral) value, with progressive rates and an exemption for a primary residence up to a certain value. Before buying, ask for the property tax clearance: it confirms the seller is up to date." } },
+  { id: "fraud", kw: ["fraude", "fraud", "estafa", "scam", "seguro enviar", "safe to send", "wire", "transferir dinero", "escrow", "seguridad"],
+    q: { es: "¿Cómo evito un fraude al pagar?", en: "How do I avoid payment fraud?" },
+    a: { es: "El fraude más común en compraventas es el cambio de instrucciones de pago por correo: alguien suplanta al agente o al abogado y envía una cuenta bancaria distinta.\n\nTres reglas:\n• Nunca transfieras a una cuenta recibida solo por correo o chat.\n• Confirma la cuenta por teléfono, llamando a un número que ya conocías.\n• Usa carta promesa de pago bancaria o depósito en garantía en lugar de transferencias directas al vendedor.",
+         en: "The most common fraud in property sales is changed payment instructions by email: someone impersonates the agent or the attorney and sends a different bank account.\n\nThree rules:\n• Never wire money to an account received only by email or chat.\n• Confirm the account by phone, calling a number you already had.\n• Use a bank promise-of-payment letter or escrow instead of direct transfers to the seller." } },
+  { id: "privacy", kw: ["mis datos", "my data", "privacidad", "privacy", "ley 81", "law 81", "datos personales", "personal data", "borrar", "delete"],
+    q: { es: "¿Qué pasa con mis datos?", en: "What happens to my data?" },
+    a: { es: "En esta demo, nada sale de tu navegador: no hay servidor ni almacenamiento, y al recargar la página todo se borra.\n\nEn producción, los datos de contacto solo se guardarían con tu autorización, para el fin que aceptaste, y podrías pedir acceso, corrección o eliminación, como establece la Ley 81 de 2019.",
+         en: "In this demo, nothing leaves your browser: there is no server or storage, and reloading the page erases everything.\n\nIn production, contact details would be stored only with your consent, for the purpose you accepted, and you could request access, correction or deletion, as Panama's Law 81 of 2019 provides." } },
+  { id: "human", kw: ["agente", "agent", "persona", "human", "hablar con", "talk to", "speak", "llamar", "call me", "abogado", "attorney", "lawyer"],
+    q: { es: "Hablar con una persona", en: "Talk to a person" },
+    a: { es: "Claro. En producción, aquí se asigna un agente que habla tu idioma y recibe esta misma ficha, para que no tengas que repetir nada. Si la consulta es legal, se deriva a un abogado.",
+         en: "Of course. In production, this is where an agent who speaks your language is assigned and receives this same file, so you do not have to repeat anything. Legal questions are routed to an attorney." } }
+];
+
+/* ---------- Fictional inventory ---------- */
+const LISTINGS = [
+  { id: "D-101", zone: "boquete", type: "house", price: 289000, beds: 3, m2: 1100, titled: true, es: "Casa con vista al valle, Alto Boquete", en: "Valley-view house, Alto Boquete" },
+  { id: "D-102", zone: "boquete", type: "house", price: 465000, beds: 4, m2: 2400, titled: true, es: "Casa entre cafetales, Jaramillo", en: "House among coffee farms, Jaramillo" },
+  { id: "D-103", zone: "boquete", type: "condo", price: 139000, beds: 2, m2: 95, titled: true, es: "Apartamento a pasos del centro, Bajo Boquete", en: "Condo steps from downtown, Bajo Boquete" },
+  { id: "D-104", zone: "boquete", type: "land", price: 98000, beds: 0, m2: 3000, titled: true, es: "Lote con agua y luz, Palmira", en: "Lot with water and power, Palmira" },
+  { id: "D-105", zone: "boquete", type: "farm", price: 720000, beds: 3, m2: 52000, titled: true, es: "Finca de café de altura con casa, Horqueta", en: "High-altitude coffee farm with house, Horqueta" },
+  { id: "D-106", zone: "highlands", type: "house", price: 215000, beds: 3, m2: 1800, titled: true, es: "Casa de montaña, Volcán", en: "Mountain house, Volcán" },
+  { id: "D-107", zone: "highlands", type: "farm", price: 340000, beds: 2, m2: 38000, titled: true, es: "Finca agrícola, Cerro Punta", en: "Working farm, Cerro Punta" },
+  { id: "D-108", zone: "david", type: "house", price: 165000, beds: 3, m2: 600, titled: true, es: "Casa en barriada cerrada, David", en: "House in gated community, David" },
+  { id: "D-109", zone: "david", type: "condo", price: 118000, beds: 2, m2: 88, titled: true, es: "Apartamento cerca de hospitales, David", en: "Condo near hospitals, David" },
+  { id: "D-110", zone: "beach", type: "house", price: 540000, beds: 3, m2: 1500, titled: true, es: "Casa frente al mar, Boca Chica", en: "Oceanfront house, Boca Chica" },
+  { id: "D-111", zone: "beach", type: "land", price: 85000, beds: 0, m2: 2000, titled: false, es: "Lote a 200 m de la playa, Las Lajas", en: "Lot 200 m from the beach, Las Lajas" },
+  { id: "D-112", zone: "beach", type: "condo", price: 245000, beds: 2, m2: 110, titled: true, es: "Apartamento con piscina, Las Lajas", en: "Condo with pool, Las Lajas" }
+];
+
+/* ---------- Pure logic ---------- */
+const norm = s => String(s).toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/\s+/g, " ").trim();
+const money = n => "$" + Math.round(n).toLocaleString("en-US");
+
+function parseBudget(text) {
+  const m = norm(text).match(/(\d[\d.,]*)\s*(k|mil|millones|millon|million|m)?\b/);
+  if (!m) return null;
+  let n = parseFloat(m[1].replace(/[.,](?=\d{3}\b)/g, "").replace(",", "."));
+  if (isNaN(n)) return null;
+  const suf = m[2] || "";
+  if (suf === "k" || suf === "mil") n *= 1e3;
+  else if (suf) n *= 1e6;
+  else if (n < 5000) n *= 1e3;
+  return STEPS[3].opts.find(o => n >= o.min && n < o.max) || STEPS[3].opts[3];
+}
+
+function matchOption(step, text) {
+  if (step.id === "budget") return parseBudget(text);
+  const t = norm(text);
+  const exact = step.opts.find(o => norm(o.es) === t || norm(o.en) === t);
+  if (exact) return exact;
+  return step.opts.find(o => (o.kw || []).some(k => t.includes(k))) || null;
+}
+
+function matchKB(text) {
+  const t = norm(text);
+  let best = null, top = 0;
+  for (const e of KB) {
+    const s = e.kw.reduce((n, k) => n + (t.includes(k) ? (k.includes(" ") ? 2 : 1) : 0), 0);
+    if (s > top) { top = s; best = e; }
+  }
+  return best;
+}
+
+function findMatches(a) {
+  const band = STEPS[3].opts.find(o => o.v === a.budget);
+  const scored = LISTINGS.map(l => {
+    let s = 0;
+    if (a.zone === "any" || l.zone === a.zone) s += 3;
+    if (l.type === a.type) s += 3;
+    if (band && l.price >= band.min * 0.85 && l.price <= band.max * 1.15) s += 3;
+    return { l, s };
+  }).sort((x, y) => y.s - x.s || x.l.price - y.l.price);
+  const exact = scored.filter(x => x.s === 9);
+  return { exact: exact.length > 0, items: (exact.length ? exact : scored).slice(0, 3).map(x => x.l) };
+}
+
+function scoreLead(a, contact) {
+  const opt = (id, v) => STEPS.find(s => s.id === id).opts.find(o => o.v === v);
+  const parts = [
+    { k: "r_timeline", pts: opt("timeline", a.timeline).pts, max: 35 },
+    { k: "r_fin", pts: opt("financing", a.financing).pts, max: 30 },
+    { k: "r_contact", pts: contact ? 20 : 0, max: 20 },
+    { k: "r_budget", pts: a.budget ? 10 : 0, max: 10 },
+    { k: "r_purpose", pts: a.purpose ? 5 : 0, max: 5 }
+  ];
+  const total = parts.reduce((n, p) => n + p.pts, 0);
+  const tier = total >= 70 ? "hot" : total >= 40 ? "warm" : "cold";
+  return { total, tier, parts };
+}
+
+if (typeof module !== "undefined") module.exports = { STEPS, KB, LISTINGS, UI, norm, parseBudget, matchOption, matchKB, findMatches, scoreLead };
+
+/* ---------- Interface ---------- */
+if (typeof document !== "undefined") (function () {
+  const $ = id => document.getElementById(id);
+  let lang = (navigator.language || "es").toLowerCase().startsWith("en") ? "en" : "es";
+  const t = k => UI[lang][k];
+  let S;
+
+  function reset() {
+    S = { step: 0, answers: {}, contact: null, consent: null, stage: "ask", log: [], lead: null };
+    say(l => STEPS[0].q[l]);
+    draw();
+  }
+  const say = (fn, cls) => S.log.push({ who: "bot", fn, cls });
+  const heard = fn => S.log.push({ who: "user", fn });
+
+  function answer(step, opt) {
+    S.answers[step.id] = opt.v;
+    S.step++;
+    if (S.step < STEPS.length) { const q = STEPS[S.step].q; say(l => q[l]); }
+    else { S.stage = "consent"; say(l => UI[l].consentAsk, "note"); }
+  }
+
+  function finish() {
+    S.stage = "done";
+    const sc = scoreLead(S.answers, S.contact);
+    const m = findMatches(S.answers);
+    S.lead = { sc, m, id: "L-" + Date.now().toString(36).toUpperCase(), at: new Date().toISOString() };
+    say(l => UI[l].done);
+  }
+
+  function onText(text) {
+    heard(() => text);
+    if (S.stage === "ask") {
+      const step = STEPS[S.step];
+      const opt = matchOption(step, text);
+      if (opt) return answer(step, opt);
+    }
+    const kb = matchKB(text);
+    if (kb) {
+      say(l => kb.a[l]);
+      if (S.stage === "ask") { const q = STEPS[S.step].q; say(l => UI[l].again + " " + q[l].split("\n\n").pop()); }
+    } else {
+      const k = S.stage === "ask" ? "pickOne" : "fallback"; say(l => UI[l][k]);
+    }
+  }
+
+  /* drawing */
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function drawStatic() {
+    document.documentElement.lang = lang;
+    document.title = lang === "es" ? "Asistente inmobiliario bilingüe para Chiriquí (demo)" : "Bilingual real estate assistant for Chiriquí (demo)";
+    document.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = t(e.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-ph]").forEach(e => { e.placeholder = t(e.dataset.i18nPh); });
+    document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  }
+
+  function drawLog() {
+    const log = $("log"); log.textContent = "";
+    S.log.forEach(m => log.appendChild(el("div", "msg " + m.who + (m.cls ? " " + m.cls : ""), m.fn(lang))));
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function chip(label, fn) { const b = el("button", "chip", label); b.type = "button"; b.addEventListener("click", fn); return b; }
+
+  function drawChips() {
+    const box = $("chips"); box.textContent = "";
+    $("contact").hidden = S.stage !== "form";
+    if (S.stage === "ask") {
+      const step = STEPS[S.step];
+      step.opts.forEach(o => box.appendChild(chip(o[lang], () => { heard(l => o[l]); answer(step, o); draw(); })));
+    } else if (S.stage === "consent") {
+      box.appendChild(chip(t("consentYes"), () => { heard(l => UI[l].consentYes); S.stage = "form"; draw(); $("cName").focus(); }));
+      box.appendChild(chip(t("consentNo"), () => { heard(l => UI[l].consentNo); S.consent = { given: false }; finish(); draw(); }));
+    } else if (S.stage === "done") {
+      KB.forEach(e => box.appendChild(chip(e.q[lang], () => { heard(l => e.q[l]); say(l => e.a[l]); draw(); })));
+    }
+  }
+
+  function label(id, v) { const o = STEPS.find(s => s.id === id).opts.find(x => x.v === v); return o ? o[lang] : null; }
+
+  function drawFicha() {
+    const f = $("fields"); f.textContent = "";
+    const rows = [["lPurpose", label("purpose", S.answers.purpose)], ["lZone", label("zone", S.answers.zone)], ["lType", label("type", S.answers.type)],
+      ["lBudget", label("budget", S.answers.budget)], ["lTimeline", label("timeline", S.answers.timeline)], ["lFinancing", label("financing", S.answers.financing)],
+      ["lContact", S.contact ? S.contact.name + ", " + S.contact.how : (S.consent && !S.consent.given ? t("contactNo") : null)]];
+    rows.forEach(([k, v]) => { f.appendChild(el("dt", "", t(k))); f.appendChild(el("dd", v ? "" : "empty", v || t("notSet"))); });
+
+    const r = $("result"); r.textContent = "";
+    if (!S.lead) return;
+    const { sc, m } = S.lead;
+    const score = el("div", "score");
+    const head = el("p"); head.style.margin = "0 0 6px";
+    head.appendChild(el("span", "tier " + sc.tier, t("tier_" + sc.tier)));
+    head.appendChild(document.createTextNode(t("score") + ": " + sc.total + " " + t("of")));
+    const bar = el("div", "bar"); const fill = el("i"); bar.appendChild(fill);
+    score.appendChild(head); score.appendChild(bar); r.appendChild(score);
+    requestAnimationFrame(() => { fill.style.width = sc.total + "%"; });
+
+    r.appendChild(el("h3", "", t("why")));
+    const ul = el("ul"); sc.parts.forEach(p => ul.appendChild(el("li", "", t(p.k) + ": " + p.pts + "/" + p.max))); r.appendChild(ul);
+
+    r.appendChild(el("h3", "", t("next")));
+    r.appendChild(el("p", "", S.contact ? t("n_" + sc.tier) : t("n_nocontact"))).style.margin = "0";
+
+    r.appendChild(el("h3", "", t("matches")));
+    if (!m.exact) r.appendChild(el("p", "", t("nearest"))).style.cssText = "margin:0;font-size:.9rem;color:var(--muted)";
+    m.items.forEach(l => {
+      const c = el("div", "listing");
+      c.appendChild(el("b", "", l[lang]));
+      c.appendChild(el("span", "price", money(l.price)));
+      c.appendChild(document.createTextNode("  " + (l.beds ? l.beds + " " + t("beds") + ", " : "") + l.m2.toLocaleString("en-US") + " m² (" + l.id + ")"));
+      c.appendChild(el("br"));
+      c.appendChild(el("span", "tag" + (l.titled ? "" : " warn"), l.titled ? t("titled") : t("rop")));
+      r.appendChild(c);
+    });
+
+    r.appendChild(el("h3", "", t("crm")));
+    const json = JSON.stringify(leadJSON(), null, 2);
+    r.appendChild(el("pre", "json", json));
+    const act = el("div", "actions");
+    const cp = el("button", "btn quiet", t("copy")); cp.type = "button";
+    cp.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(json); cp.textContent = t("copied"); }
+      catch (e) { const sel = window.getSelection(); sel.selectAllChildren(r.querySelector("pre")); }
+    });
+    const dl = el("button", "btn quiet", t("download")); dl.type = "button";
+    dl.addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+      a.download = S.lead.id + ".json"; a.click(); URL.revokeObjectURL(a.href);
+    });
+    act.appendChild(cp); act.appendChild(dl); r.appendChild(act);
+  }
+
+  function leadJSON() {
+    const { sc, m, id, at } = S.lead;
+    return {
+      leadId: id, createdAt: at, language: lang, source: "web-assistant-demo",
+      profile: Object.assign({}, S.answers),
+      contact: S.contact,
+      consent: S.consent && S.consent.given ? { given: true, timestamp: S.consent.at, purpose: "agent-contact", noticeVersion: "1.0", legalBasis: "Ley 81 de 2019" } : { given: false },
+      score: sc.total, tier: sc.tier,
+      scoreBreakdown: sc.parts.map(p => ({ factor: p.k.slice(2), points: p.pts, max: p.max })),
+      matchedListings: m.items.map(l => l.id),
+      flags: m.items.some(l => !l.titled) ? ["match-includes-rights-of-possession"] : []
+    };
+  }
+
+  function draw() { drawStatic(); drawLog(); drawChips(); drawFicha(); }
+
+  /* events */
+  document.querySelectorAll("[data-lang]").forEach(b => b.addEventListener("click", () => { lang = b.dataset.lang; draw(); }));
+  $("restart").addEventListener("click", reset);
+  $("composer").addEventListener("submit", e => {
+    e.preventDefault();
+    const v = $("text").value.trim(); if (!v) return;
+    $("text").value = ""; onText(v); draw();
+  });
+  $("contact").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("cName").value.trim(), how = $("cHow").value.trim(), err = $("cErr");
+    const msg = !name ? "errName" : !how ? "errHow" : !$("cOk").checked ? "errOk" : null;
+    if (msg) { err.textContent = t(msg); err.hidden = false; return; }
+    err.hidden = true;
+    S.contact = { name, how }; S.consent = { given: true, at: new Date().toISOString() };
+    $("cName").value = ""; $("cHow").value = ""; $("cOk").checked = false;
+    say(l => UI[l].saved); finish(); draw();
+  });
+  $("cSkip").addEventListener("click", () => { heard(l => UI[l].fSkip); S.consent = { given: false }; finish(); draw(); });
+
+  reset();
+})();
+</script>
+</body>
+</html>
