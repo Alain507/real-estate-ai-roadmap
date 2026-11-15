@@ -53,7 +53,7 @@ The information on buying property is general and is not legal advice for a spec
 
 ## Author
 
-Alain Guerra, attorney (Idoneidad 33617) and cybersecurity technician, Boquete, Chiriquí, Panama.
+Alain Guerra, attorney and cybersecurity technician, Boquete, Chiriquí, Panama.
 alain.abogado507@gmail.com, [github.com/Alain507](https://github.com/Alain507)
 
 ## License
